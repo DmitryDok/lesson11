@@ -1,0 +1,33 @@
+pipeline {
+    agent {
+        docker {
+            image 'dmitrydok/builder'
+        }
+    }
+    stages {
+        stage ('git') {
+            steps {
+                git 'https://github.com/boxfuse/boxfuse-sample-java-war-hello.git'
+            }
+        }
+        stage ('build') {
+            steps {
+                sh 'mvn package -f /boxfuse-sample-java-war-hello/pom.yml'
+                sh 'docker create --name newtomcat tomcat:alpine'
+                sh 'docker cp **/*.war newtomcat:/usr/local/tomcat/webapps/'
+            }
+        }
+        stage ('deploy') {
+            steps {
+                sh 'docker login -u dmitrydok -p 1qaz2wsx3edc'
+                sh 'docker tag newtomcat dmitrydok/newtomcat'
+                sh 'docker push dmitrydok/newtomcat'
+            }
+        }
+        stage ('prod') {
+            steps {
+                sh 'ssh 34.88.6.246 docker run -d -p 8080:8080 dmitrydok/newtomcat'
+            }
+        }
+    }
+}
